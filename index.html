@@ -318,6 +318,25 @@
         transition-duration: 0.01ms !important;
       }
     }
+
+    
+/* Shake effect when No is pressed */
+.card.shake {
+  animation: noButtonShake 0.4s ease-in-out;
+}
+
+@keyframes noButtonShake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  15%, 45%, 75% {
+    transform: translateX(-7px);
+  }
+  30%, 60%, 90% {
+    transform: translateX(7px);
+  }
+}
+
   </style>
 </head>
 
@@ -538,10 +557,25 @@
     });
 
     // Touch: move away when the user touches No.
-    noBtn.addEventListener("pointerdown", function(event) {
-      event.preventDefault();
-      moveNoButton();
-    });
+   
+noBtn.addEventListener("pointerdown", function(event) {
+  event.preventDefault();
+
+  showNoFeedback();
+  moveNoButton();
+});
+
+noBtn.addEventListener("click", function(event) {
+  event.preventDefault();
+
+  // Handle keyboard activation without repeating
+  // feedback already triggered by pointerdown.
+  if (event.detail === 0) {
+    showNoFeedback();
+    moveNoButton();
+  }
+});
+
 
     // Prevent the No button from being selected by clicking.
     noBtn.addEventListener("click", function(event) {
@@ -609,6 +643,46 @@
         noBtn.style.top = Math.min(top, maxTop) + "px";
       }
     });
+
+
+function showNoFeedback() {
+  const card = document.querySelector(".card");
+
+  // Vibrate supported mobile devices
+  if ("vibrate" in navigator) {
+    navigator.vibrate([150, 60, 150]);
+  }
+
+  // Shake the card
+  card.classList.remove("shake");
+
+  // Restart the animation
+  void card.offsetWidth;
+
+  card.classList.add("shake");
+
+  setTimeout(function () {
+    card.classList.remove("shake");
+  }, 450);
+
+  // Speak "Not allowed!"
+  if ("speechSynthesis" in window) {
+    window.speechSynthesis.cancel();
+
+    const message = new SpeechSynthesisUtterance(
+      "Not allowed!"
+    );
+
+    message.lang = "en-US";
+    message.rate = 0.9;
+    message.pitch = 1.2;
+    message.volume = 1;
+
+    window.speechSynthesis.speak(message);
+  }
+}
+
+
   </script>
 </body>
 </html>

@@ -446,36 +446,57 @@
     }
 
     // Move the No button to a random position inside its container.
-    function moveNoButton() {
-      const maxLeft = Math.max(
-        0,
-        buttonArea.clientWidth - noBtn.offsetWidth
-      );
+   
+function moveNoButton() {
+  const areaRect = buttonArea.getBoundingClientRect();
+  const yesRect = yesBtn.getBoundingClientRect();
 
-      const maxTop = Math.max(
-        0,
-        buttonArea.clientHeight - noBtn.offsetHeight
-      );
+  const noWidth = noBtn.offsetWidth;
+  const noHeight = noBtn.offsetHeight;
 
-      const oldLeft = noBtn.offsetLeft;
-      const oldTop = noBtn.offsetTop;
+  const maxLeft = buttonArea.clientWidth - noWidth;
+  const maxTop = buttonArea.clientHeight - noHeight;
 
-      let newLeft = oldLeft;
-      let newTop = oldTop;
+  const gap = 12;
+  let newLeft;
+  let newTop;
+  let foundPosition = false;
 
-      for (let attempt = 0; attempt < 25; attempt++) {
-        newLeft = Math.random() * maxLeft;
-        newTop = Math.random() * maxTop;
+  for (let i = 0; i < 300; i++) {
+    newLeft = Math.random() * maxLeft;
+    newTop = Math.random() * maxTop;
 
-        if (
-          Math.hypot(
-            newLeft - oldLeft,
-            newTop - oldTop
-          ) > 65
-        ) {
-          break;
-        }
-      }
+    const noRect = {
+      left: areaRect.left + newLeft,
+      top: areaRect.top + newTop,
+      right: areaRect.left + newLeft + noWidth,
+      bottom: areaRect.top + newTop + noHeight
+    };
+
+    const overlapsYes =
+      noRect.left < yesRect.right + gap &&
+      noRect.right > yesRect.left - gap &&
+      noRect.top < yesRect.bottom + gap &&
+      noRect.bottom > yesRect.top - gap;
+
+    if (!overlapsYes) {
+      foundPosition = true;
+      break;
+    }
+  }
+
+  if (foundPosition) {
+    noBtn.style.left = newLeft + "px";
+    noBtn.style.top = newTop + "px";
+  }
+
+  moveCount++;
+
+  hint.textContent = moveCount < 4
+    ? "Hehe! You can't catch me! 🙈"
+    : "No chance! Just choose YES! 😂❤️";
+}
+
 
       noBtn.style.left = newLeft + "px";
       noBtn.style.top = newTop + "px";

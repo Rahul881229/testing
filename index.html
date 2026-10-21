@@ -160,15 +160,15 @@
     }
 
     #noBtn {
-      position: absolute;
+      position: fixed;
       top: 20px;
       left: 56%;
       color: #a52b60;
       background: #ffe0eb;
       box-shadow: 0 5px 15px rgba(165, 43, 96, 0.12);
       white-space: nowrap;
-      transition: left 0.15s ease, top 0.15s ease;
-      z-index: 3;
+      transition: left 0.45s ease-in-out, top 0.45s ease-in-out;
+      z-index: 9999;
     }
 
     .hint {
@@ -445,67 +445,86 @@
       hearts.appendChild(heart);
     }
 
-    // Move the No button to a random position inside its container.
-   
-function moveNoButton() {
-  const areaRect = buttonArea.getBoundingClientRect();
-  const yesRect = yesBtn.getBoundingClientRect();
+    // Keep No beside Yes when the game first appears and when replaying.
+    function positionNoBesideYes() {
+      const yesRect = yesBtn.getBoundingClientRect();
+      const noWidth = noBtn.offsetWidth;
+      const noHeight = noBtn.offsetHeight;
+      const gap = 18;
+      const margin = 10;
 
-  const noWidth = noBtn.offsetWidth;
-  const noHeight = noBtn.offsetHeight;
+      noBtn.style.position = "fixed";
+      noBtn.style.zIndex = "9999";
 
-  const maxLeft = buttonArea.clientWidth - noWidth;
-  const maxTop = buttonArea.clientHeight - noHeight;
+      // Prefer the right side of Yes so both buttons appear on one row.
+      let left = yesRect.right + gap;
+      let top = yesRect.top;
 
-  const gap = 12;
-  let newLeft;
-  let newTop;
-  let foundPosition = false;
+      // On narrow screens, place No just below Yes if there is no room beside it.
+      if (left + noWidth > window.innerWidth - margin) {
+        left = Math.max(margin, yesRect.left);
+        top = yesRect.bottom + gap;
+      }
 
-  for (let i = 0; i < 300; i++) {
-    newLeft = Math.random() * maxLeft;
-    newTop = Math.random() * maxTop;
+      // Keep the initial position inside the visible viewport.
+      left = Math.min(Math.max(margin, left), window.innerWidth - noWidth - margin);
+      top = Math.min(Math.max(margin, top), window.innerHeight - noHeight - margin);
 
-    const noRect = {
-      left: areaRect.left + newLeft,
-      top: areaRect.top + newTop,
-      right: areaRect.left + newLeft + noWidth,
-      bottom: areaRect.top + newTop + noHeight
-    };
-
-    const overlapsYes =
-      noRect.left < yesRect.right + gap &&
-      noRect.right > yesRect.left - gap &&
-      noRect.top < yesRect.bottom + gap &&
-      noRect.bottom > yesRect.top - gap;
-
-    if (!overlapsYes) {
-      foundPosition = true;
-      break;
+      noBtn.style.left = `${left}px`;
+      noBtn.style.top = `${top}px`;
     }
-  }
 
-  if (foundPosition) {
-    noBtn.style.left = newLeft + "px";
-    noBtn.style.top = newTop + "px";
-  }
+    // Set the initial position after the page has laid out both buttons.
+    positionNoBesideYes();
 
-  moveCount++;
+    // Let the No button move anywhere in the visible page, except over Yes.
+    function moveNoButton() {
+      const yesRect = yesBtn.getBoundingClientRect();
+      const noWidth = noBtn.offsetWidth;
+      const noHeight = noBtn.offsetHeight;
+      const margin = 10;
+      const maxLeft = Math.max(margin, window.innerWidth - noWidth - margin);
+      const maxTop = Math.max(margin, window.innerHeight - noHeight - margin);
+      const gap = 15;
 
-  hint.textContent = moveCount < 4
-    ? "Hehe! You can't catch me! 🙈"
-    : "No chance! Just choose YES! 😂❤️";
-}
+      // Use viewport coordinates so No can move anywhere on the page.
+      noBtn.style.position = "fixed";
+      noBtn.style.zIndex = "9999";
 
+      let foundPosition = false;
+      let newLeft = 0;
+      let newTop = 0;
 
-      noBtn.style.left = newLeft + "px";
-      noBtn.style.top = newTop + "px";
+      // Test random positions across the whole visible viewport.
+      for (let attempt = 0; attempt < 1000; attempt++) {
+        const candidateLeft = margin + Math.random() * Math.max(0, maxLeft - margin);
+        const candidateTop = margin + Math.random() * Math.max(0, maxTop - margin);
+        const candidateRight = candidateLeft + noWidth;
+        const candidateBottom = candidateTop + noHeight;
+
+        const overlapsYes =
+          candidateLeft < yesRect.right + gap &&
+          candidateRight > yesRect.left - gap &&
+          candidateTop < yesRect.bottom + gap &&
+          candidateBottom > yesRect.top - gap;
+
+        if (!overlapsYes) {
+          newLeft = candidateLeft;
+          newTop = candidateTop;
+          foundPosition = true;
+          break;
+        }
+      }
+
+      if (foundPosition) {
+        noBtn.style.left = `${newLeft}px`;
+        noBtn.style.top = `${newTop}px`;
+      }
 
       moveCount++;
-
       hint.textContent = moveCount < 4
         ? "Hehe! You can't catch me! 🙈"
-        : "The No button is too shy! Just choose YES! 😂❤️";
+        : "No chance! Just choose YES! 😂❤️";
     }
 
     // Desktop: run away when the pointer hovers over No.
@@ -566,30 +585,28 @@ function moveNoButton() {
       moveCount = 0;
       hint.textContent = 'Try catching the "No" button if you can! 😜';
 
-      noBtn.style.left =
-        window.innerWidth <= 480 ? "55%" : "56%";
-
-      noBtn.style.top = "20px";
+      positionNoBesideYes();
     });
 
-    // Keep No inside the button area when the screen is resized.
+    // Reposition beside Yes on resize before the No button has started running away.
     window.addEventListener("resize", function() {
-      if (questionScreen.style.display !== "none") {
-        const maxLeft = Math.max(
-          0,
-          buttonArea.clientWidth - noBtn.offsetWidth
-        );
+      if (questionScreen.style.display !== "none" && moveCount === 0) {
+        positionNoBesideYes();
+      }
+    });
 
-        const maxTop = Math.max(
-          0,
-          buttonArea.clientHeight - noBtn.offsetHeight
-        );
-
-        noBtn.style.left =
-          Math.min(noBtn.offsetLeft, maxLeft) + "px";
-
-        noBtn.style.top =
-          Math.min(noBtn.offsetTop, maxTop) + "px";
+    // Keep a moved No button inside the visible viewport after resizing.
+    window.addEventListener("resize", function() {
+      if (
+        questionScreen.style.display !== "none" &&
+        noBtn.style.position === "fixed"
+      ) {
+        const maxLeft = Math.max(0, window.innerWidth - noBtn.offsetWidth);
+        const maxTop = Math.max(0, window.innerHeight - noBtn.offsetHeight);
+        const left = parseFloat(noBtn.style.left) || 0;
+        const top = parseFloat(noBtn.style.top) || 0;
+        noBtn.style.left = Math.min(left, maxLeft) + "px";
+        noBtn.style.top = Math.min(top, maxTop) + "px";
       }
     });
   </script>
